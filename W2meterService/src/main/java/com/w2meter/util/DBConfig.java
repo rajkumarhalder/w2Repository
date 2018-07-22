@@ -12,10 +12,10 @@ public class DBConfig {
 	@Bean
     public DataSource dataSource(){
        DriverManagerDataSource dataSource = new DriverManagerDataSource();
-       dataSource.setDriverClassName("com.mysql.jdbc.Driver");
-       dataSource.setUrl("jdbc:mysql://178.128.252.211:3306/test");
-       dataSource.setUsername("w2meter");
-       dataSource.setPassword("admin@1234" );
+       dataSource.setDriverClassName("org.postgresql.Driver");
+       dataSource.setUrl("jdbc:postgresql://localhost:5432/w2meter_dev");
+       dataSource.setUsername("postgres");
+       dataSource.setPassword("w2meter@123" );
        return dataSource;
     }
 }
