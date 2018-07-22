@@ -9,28 +9,24 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.SequenceGenerator;
 import javax.persistence.Table;
-import javax.persistence.Temporal;
-import javax.persistence.TemporalType;
+
 
 @Entity
-@Table(name="votedetails",schema="w2meter")
-public class VoteDetails {
+@Table(name="groupdetails",schema="w2meter")
+public class GroupDetails {
 
 	@Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "VOTE_SEQ")
-    @SequenceGenerator(sequenceName = "w2meter.votedetails_seq", allocationSize = 1, name = "VOTE_SEQ")
-	@Column(name="vote_id")
-	private Long voteId;
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "GROUP_SEQ")
+    @SequenceGenerator(sequenceName = "w2meter.groupdetails_seq", allocationSize = 1, name = "GROUP_SEQ")
 	
-	@Column(name="userid")
-	private Long userId;
-	@Column(name="country_code")
-	private String countryCode;
-	@Column(name="votevalue")
-	private Integer voteValue;
-	@Temporal(TemporalType.DATE)
-	@Column(name="voting_date")
-	private Date votingDate;
+	@Column(name="group_id")
+	private Long groupId;
+	@Column(name="member_ids")
+	private String memberIds;
+	@Column(name="group_name")
+	private String groupIconUrl;
+	@Column(name="group_icon_url")
+	private String groupName;
 	@Column(name="createdate")
 	private Date createDate ;
 	@Column(name="createid")
@@ -41,35 +37,24 @@ public class VoteDetails {
 	private Long updateId;
 	@Column(name="is_active")
 	private int isActive ;
-	public Long getVoteId() {
-		return voteId;
+	public Long getGroupId() {
+		return groupId;
 	}
-	public void setVoteId(Long voteId) {
-		this.voteId = voteId;
+	public void setGroupId(Long groupId) {
+		this.groupId = groupId;
 	}
-	public Long getUserId() {
-		return userId;
+	
+	public String getMemberIds() {
+		return memberIds;
 	}
-	public void setUserId(Long userId) {
-		this.userId = userId;
+	public void setMemberIds(String memberIds) {
+		this.memberIds = memberIds;
 	}
-	public String getCountryCode() {
-		return countryCode;
+	public String getGroupName() {
+		return groupName;
 	}
-	public void setCountryCode(String countryCode) {
-		this.countryCode = countryCode;
-	}
-	public Integer getVoteValue() {
-		return voteValue;
-	}
-	public void setVoteValue(Integer voteValue) {
-		this.voteValue = voteValue;
-	}
-	public Date getVotingDate() {
-		return votingDate;
-	}
-	public void setVotingDate(Date votingDate) {
-		this.votingDate = votingDate;
+	public void setGroupName(String groupName) {
+		this.groupName = groupName;
 	}
 	public Date getCreateDate() {
 		return createDate;
@@ -101,7 +86,11 @@ public class VoteDetails {
 	public void setIsActive(int isActive) {
 		this.isActive = isActive;
 	}
-
-	
+	public String getGroupIconUrl() {
+		return groupIconUrl;
+	}
+	public void setGroupIconUrl(String groupIconUrl) {
+		this.groupIconUrl = groupIconUrl;
+	}
 
 }

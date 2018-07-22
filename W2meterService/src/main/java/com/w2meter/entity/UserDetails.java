@@ -10,8 +10,7 @@ import javax.persistence.Table;
 @Entity
 @Table(name="userdetails",schema="w2meter")
 public class UserDetails {
-	
-	
+
 	@Id
 	@Column(name="user_id")
 	private Long userId ;

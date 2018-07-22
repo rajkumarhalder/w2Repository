@@ -7,6 +7,8 @@ public class W2meterConstant {
 	public static String GENDER_MALE="M";
 	public static String GENDER_FEMALE="F";
 	public static String PROFILE_PIC_URL="Z:\\W2meter\\profile_pic\\";
+	public static String GROUP_ICON_URL="Z:\\W2meter\\group_icon\\";
+	public static String GROUP_ICON_LOCATION_TEMP="GroupIcon";
 	
 	public static int STATUS_CODE_SUCCESS=200;
 
