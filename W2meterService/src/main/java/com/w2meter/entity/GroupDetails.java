@@ -23,9 +23,9 @@ public class GroupDetails {
 	private Long groupId;
 	@Column(name="member_ids")
 	private String memberIds;
-	@Column(name="group_name")
-	private String groupIconUrl;
 	@Column(name="group_icon_url")
+	private String groupIconUrl;
+	@Column(name="group_name")
 	private String groupName;
 	@Column(name="createdate")
 	private Date createDate ;

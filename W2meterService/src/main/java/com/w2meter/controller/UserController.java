@@ -1,6 +1,8 @@
 package com.w2meter.controller;
 
 import java.io.File;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -77,17 +79,46 @@ public class UserController {
 				userDetails.setAbout(about);
 
 			Path path=null;
-			if(null!=profilePic) {
-				byte[] bytes = profilePic.getBytes();
-				path = Paths.get(W2meterConstant.PROFILE_PIC_URL + userId+"\\"+profilePic.getOriginalFilename());
-				if(!new File(W2meterConstant.PROFILE_PIC_URL + userId).exists())
-					new File(W2meterConstant.PROFILE_PIC_URL + userId).mkdirs();
-				Files.write(path, bytes);
+			try {
+
+				if(null!=profilePic) {
+					byte[] bytes = profilePic.getBytes();
+					path = Paths.get(W2meterConstant.PROFILE_PIC_URL + userId+"/"+profilePic.getOriginalFilename());
+					if(!new File(W2meterConstant.PROFILE_PIC_URL + userId).exists())
+						new File(W2meterConstant.PROFILE_PIC_URL + userId).mkdirs();
+					Files.write(path, bytes);
+				}
+			} catch (Exception e) {
+				StringWriter sw = new StringWriter();
+				PrintWriter pw = new PrintWriter(sw);
+				e.printStackTrace(pw);
+				responseDto.setData(pw.toString());
 			}
-			userDetails.setPrifilePicUrl(path.toString());
+			if(null!=path)
+				userDetails.setPrifilePicUrl(path.toString());
 
-			userService.updateUserDetail(userDetails);
+			userDetails.setMobileNo(appInfo.getCountryCode()+appInfo.getMobileNumber()+"");
+			userDetails=(UserDetails) userService.updateUserDetail(userDetails);
+			
+			Map<String,Object> userDetailMap=new HashMap<>();
+			userDetailMap.put("name", userDetails.getName());
+			userDetailMap.put("about", userDetails.getAbout());
+			
+			if(null!=userDetails.getPrifilePicUrl()) {
+				userDetailMap.put("profilePic", W2meterConstant.SERVER_BASE_URL+userDetails.getPrifilePicUrl().replaceAll(W2meterConstant.TOMCAT_HOME, "/"));
+			}
+			else
+				userDetailMap.put("profilePic", null);
+			
+			userDetailMap.put("gender", userDetails.getGender());
+			if(null!=userDetails.getDateOfBirth())
+				userDetailMap.put("dateOfBirth", sdf.format(userDetails.getDateOfBirth()));
+			else
+				userDetailMap.put("dateOfBirth", null);
+			
+			userDetailMap.put("userId", userId);
 
+			responseDto.setData(userDetailMap);
 			responseDto.setStatusCode(W2meterConstant.STATUS_CODE_SUCCESS);
 			responseDto.setStatus(W2meterConstant.REST_API_STATUS_SUCCESS);
 			responseDto.setIdentificationToken(request.getHeader("identificationToken"));
@@ -104,20 +135,19 @@ public class UserController {
 			@RequestParam("countryCode") String countryCode,
 			@RequestParam("mobileNumber") String mobileNumber,
 			@RequestParam("otp") String currentOtp) {
+		
 		ResponseDto responseDto=null;
 		try {
 			responseDto=new ResponseDto();
 			if(null!=countryCode && !countryCode.isEmpty() 
 					&& null!=mobileNumber && !mobileNumber.isEmpty()
 					&& null!=currentOtp && !currentOtp.isEmpty()) {
-
-
-
 				UserIdentification userIdentification=new  UserIdentification();
 
 				userIdentification.setCountryCode(countryCode);
 				userIdentification.setMobileNo(Long.valueOf(mobileNumber));
 				userIdentification.setCurrentOtp(currentOtp);
+				userIdentification.setMobileNoWithCountryCode(countryCode+mobileNumber);
 
 				UserIdentification existingUserIdentification=(UserIdentification) userService.findExistingUserIdentification(userIdentification);
 
@@ -128,6 +158,9 @@ public class UserController {
 
 				String identificationToken=TokenUtil.createToken(String.valueOf(userIdentification.getId()), String.valueOf(userIdentification.getMobileNo()),userIdentification.getCountryCode());
 
+				userIdentification.setCurrentToken(identificationToken);
+				userService.registerUser(userIdentification);
+				
 				responseDto.setIdentificationToken(identificationToken);
 				responseDto.setStatus(W2meterConstant.REST_API_STATUS_SUCCESS);
 				responseDto.setStatusCode(W2meterConstant.STATUS_CODE_SUCCESS);
@@ -158,13 +191,29 @@ public class UserController {
 			Long userId=appInfo.getUserId();
 
 			UserDetails userDetails=(UserDetails) userService.getUserDetail(userId);
+			
+			if(null==userDetails)
+				userDetails=new UserDetails();
+			
 			SimpleDateFormat sdf=new SimpleDateFormat(W2meterConstant.DATE_FORMAT);
-			Map<String,String> userDetailMap=new HashMap<>();
+			Map<String,Object> userDetailMap=new HashMap<>();
 			userDetailMap.put("name", userDetails.getName());
 			userDetailMap.put("about", userDetails.getAbout());
-			userDetailMap.put("profilePic", userDetails.getPrifilePicUrl());
+			
+			if(null!=userDetails.getPrifilePicUrl()) {
+				
+				userDetailMap.put("profilePic", W2meterConstant.SERVER_BASE_URL+userDetails.getPrifilePicUrl().replaceAll(W2meterConstant.TOMCAT_HOME, "/"));
+			}
+			else
+				userDetailMap.put("profilePic", null);
+			
 			userDetailMap.put("gender", userDetails.getGender());
-			userDetailMap.put("dateOfBirth", sdf.format(userDetails.getDateOfBirth()));
+			if(null!=userDetails.getDateOfBirth())
+				userDetailMap.put("dateOfBirth", sdf.format(userDetails.getDateOfBirth()));
+			else
+				userDetailMap.put("dateOfBirth", null);
+			
+			userDetailMap.put("userId", userId);
 
 			responseDto.setStatus(W2meterConstant.REST_API_STATUS_SUCCESS);
 			responseDto.setStatusCode(W2meterConstant.STATUS_CODE_SUCCESS);
@@ -199,7 +248,9 @@ public class UserController {
 			voteDetails.setVoteValue(Integer.parseInt(todayrating));
 			voteDetails.setCountryCode(appInfo.getCountryCode());
 
-			userService.postVote(voteDetails);
+			Object object=userService.postVote(voteDetails, appInfo);
+			
+			responseDto.setData(object);
 
 			responseDto.setStatusCode(W2meterConstant.STATUS_CODE_SUCCESS);
 			responseDto.setStatus(W2meterConstant.REST_API_STATUS_SUCCESS);
@@ -214,9 +265,9 @@ public class UserController {
 	@RequestMapping("/createnewgroup")
 	public Object createGroup(HttpServletRequest request,
 			HttpServletResponse response,
-			@RequestParam(value="groupname") String groupName,
-			@RequestParam(value="groupicon") MultipartFile groupIcon,
-			@RequestParam(value="groupid") String groupId) {
+			@RequestParam(value="groupname",required=false) String groupName,
+			@RequestParam(value="groupicon",required=false) MultipartFile groupIcon,
+			@RequestParam(value="groupid",required=false) String groupId) {
 
 		ResponseDto responseDto=null;
 		try {
@@ -229,34 +280,32 @@ public class UserController {
 			}
 
 			Long userId=appInfo.getUserId();
+			Path path=null;
+			if(null!=groupIcon) {
+				byte[] bytes = groupIcon.getBytes();
+				path = Paths.get(W2meterConstant.PROFILE_PIC_URL + userId+"/"+W2meterConstant.GROUP_ICON_LOCATION_TEMP+"/"+groupIcon.getOriginalFilename());
+				if(!new File(W2meterConstant.PROFILE_PIC_URL + userId+"/"+W2meterConstant.GROUP_ICON_LOCATION_TEMP).exists())
+					new File(W2meterConstant.PROFILE_PIC_URL + userId+"/"+W2meterConstant.GROUP_ICON_LOCATION_TEMP).mkdirs();
+				Files.write(path, bytes);
+			}
 
 			GroupDetails groupDetails=null;
+			
 			if(null!=groupName && !groupName.isEmpty() && Integer.parseInt(groupId)==0) {
 				groupDetails=new GroupDetails();
 				groupDetails.setGroupName(groupName);
 				groupDetails.setMemberIds(String.valueOf(userId));
-
-				Path path=null;
-				if(null!=groupIcon) {
-					byte[] bytes = groupIcon.getBytes();
-					path = Paths.get(W2meterConstant.PROFILE_PIC_URL + userId+"\\"+W2meterConstant.GROUP_ICON_LOCATION_TEMP+"\\"+groupIcon.getOriginalFilename());
-					if(!new File(W2meterConstant.PROFILE_PIC_URL + userId+"\\"+W2meterConstant.GROUP_ICON_LOCATION_TEMP).exists())
-						new File(W2meterConstant.PROFILE_PIC_URL + userId+"\\"+W2meterConstant.GROUP_ICON_LOCATION_TEMP).mkdirs();
-					Files.write(path, bytes);
-				}
-
-				groupDetails=userService.saveGroup(groupDetails);
-
-				if(null !=groupDetails && null!=groupDetails.getGroupId()) {
+				groupDetails.setCreateId(userId);
+				groupDetails=userService.saveGroup(groupDetails, W2meterConstant.OPERATION_FLAG_ADD, appInfo);
+				
+				if(null!=path) {
 					if(!new File(W2meterConstant.GROUP_ICON_URL + groupDetails.getGroupId()).exists())
 						new File(W2meterConstant.GROUP_ICON_URL + groupDetails.getGroupId()).mkdirs();
 
-					path.toFile().renameTo(new File(W2meterConstant.GROUP_ICON_URL + groupDetails.getGroupId()+"\\"+groupIcon.getOriginalFilename()));
+					path.toFile().renameTo(new File(W2meterConstant.GROUP_ICON_URL + groupDetails.getGroupId()+"/"+groupIcon.getOriginalFilename()));
 
-					groupDetails.setMemberIds(String.valueOf(userId));
-					groupDetails.setGroupIconUrl(W2meterConstant.GROUP_ICON_URL + groupDetails.getGroupId()+"\\"+groupIcon.getOriginalFilename());
-
-					userService.saveGroup(groupDetails);
+					groupDetails.setGroupIconUrl(W2meterConstant.GROUP_ICON_URL + groupDetails.getGroupId()+"/"+groupIcon.getOriginalFilename());
+					groupDetails=userService.saveGroup(groupDetails, W2meterConstant.OPERATION_FLAG_ADD, appInfo);
 				}
 			}
 
@@ -266,21 +315,32 @@ public class UserController {
 				groupDetails.setGroupId(Long.parseLong(groupId));
 				if(null!=groupName && !groupName.isEmpty())
 					groupDetails.setGroupName(groupName);
-				Path path=null;
 				if(null!=groupIcon) {
-					path = Paths.get(W2meterConstant.GROUP_ICON_URL + groupDetails.getGroupId()+"\\"+groupIcon.getOriginalFilename());
+					path = Paths.get(W2meterConstant.GROUP_ICON_URL + groupDetails.getGroupId()+"/"+groupIcon.getOriginalFilename());
 					if(!new File(W2meterConstant.GROUP_ICON_URL + groupDetails.getGroupId()).exists())
 						new File(W2meterConstant.GROUP_ICON_URL + groupDetails.getGroupId()).mkdirs();
 
 					Files.write(path, groupIcon.getBytes());
 					groupDetails.setGroupIconUrl(path.toString());
 				}
-				userService.saveGroup(groupDetails);
+				groupDetails.setCreateId(userId);
+				groupDetails=userService.saveGroup(groupDetails, W2meterConstant.OPERATION_FLAG_ADD, appInfo);
 
 			}
+			
+			Map<String,Object> groupDetailMap=new HashMap<>();
+			groupDetailMap.put("groupid", groupDetails.getGroupId());
+			groupDetailMap.put("groupname", groupDetails.getGroupName());
+			if(null!=groupDetails.getGroupIconUrl()) {
+				groupDetailMap.put("groupicon", W2meterConstant.SERVER_BASE_URL+groupDetails.getGroupIconUrl().replaceAll(W2meterConstant.TOMCAT_HOME, "/"));
+			}
+			else
+			groupDetailMap.put("groupicon", groupDetails.getGroupIconUrl());
+			
 			responseDto.setStatusCode(W2meterConstant.STATUS_CODE_SUCCESS);
 			responseDto.setStatus(W2meterConstant.REST_API_STATUS_SUCCESS);
 			responseDto.setIdentificationToken(request.getHeader("identificationToken"));
+			responseDto.setData(groupDetailMap);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -292,7 +352,8 @@ public class UserController {
 	public Object updateGroupMemeber(HttpServletRequest request,
 			HttpServletResponse response,
 			@RequestParam(value="groupid") String groupId,
-			@RequestParam(value="membersids") String membersids) {
+			@RequestParam(value="memberId") String memberId,
+			@RequestParam(value="operationFlag") String operationFlag) {
 
 		ResponseDto responseDto=null;
 		try {
@@ -303,18 +364,14 @@ public class UserController {
 			} catch (Exception e) {
 				throw e;
 			}
-
+			
 			Long userId=appInfo.getUserId();
-
 			GroupDetails groupDetails=null;
-
-			if(Integer.parseInt(groupId)>0 && null!=membersids && !membersids.isEmpty()) {
+			if(Integer.parseInt(groupId)>0 && null!=memberId && null!=operationFlag) {
 				groupDetails=new GroupDetails();
 				groupDetails.setGroupId(Long.parseLong(groupId));
-				groupDetails.setMemberIds(membersids);
-				groupDetails.setUpdateId(userId);
-				userService.saveGroup(groupDetails);
-
+				groupDetails.setMemberIds(memberId);
+				userService.updateGroupMembers(groupDetails, operationFlag, appInfo);
 			}
 			responseDto.setStatusCode(W2meterConstant.STATUS_CODE_SUCCESS);
 			responseDto.setStatus(W2meterConstant.REST_API_STATUS_SUCCESS);
@@ -369,8 +426,6 @@ public class UserController {
 			} catch (Exception e) {
 				throw e;
 			}
-
-
 			Long userId=appInfo.getUserId();
 
 			List<Object> groupList= (List<Object>) userService.getGroupDetailsByCreateId(userId);
@@ -454,4 +509,58 @@ public class UserController {
 	}
 
 
+	@RequestMapping("/getgraphdetails")
+	public Object getDataForGraph(HttpServletRequest request,
+			                      HttpServletResponse response) {
+
+		ResponseDto responseDto=null;
+		try {
+			responseDto=new ResponseDto();
+			AppInfo appInfo=null;
+			try {
+				appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
+			} catch (Exception e) {
+				throw e;
+			}
+
+			Object obj=userService.getGraphData(appInfo);
+
+			responseDto.setStatus(W2meterConstant.REST_API_STATUS_SUCCESS);
+			responseDto.setStatusCode(W2meterConstant.STATUS_CODE_SUCCESS);
+			responseDto.setData(obj);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return responseDto;
+	}
+	
+	
+	@RequestMapping("/deletegroup")
+	public Object deleteGroup(HttpServletRequest request,
+			                  HttpServletResponse response,
+			                  @RequestParam(value="groupId") String groupId) {
+
+		ResponseDto responseDto=null;
+		try {
+			responseDto=new ResponseDto();
+			AppInfo appInfo=null;
+			try {
+				appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
+			} catch (Exception e) {
+				throw e;
+			}
+
+			userService.deleteGroup(Long.valueOf(groupId), appInfo);
+
+			responseDto.setStatus(W2meterConstant.REST_API_STATUS_SUCCESS);
+			responseDto.setStatusCode(W2meterConstant.STATUS_CODE_SUCCESS);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return responseDto;
+	}
+	
+	
 }

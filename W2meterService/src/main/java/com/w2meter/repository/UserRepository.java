@@ -15,7 +15,7 @@ public interface UserRepository  extends CrudRepository<UserDetails, Long>{
 	public UserDetails save(UserDetails userInfo);
 	public UserDetails findByUserId(Long userId);
 	public List<UserDetails> findByUserIdIn(List<Long> userId);
-	public List<UserDetails> findBymobileNo(List<String> mobileNo);
+	public List<UserDetails> findByMobileNoIn(List<String> mobileNo);
 	
 	
 }

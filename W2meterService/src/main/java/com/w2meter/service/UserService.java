@@ -18,9 +18,9 @@ public interface UserService {
 
 	public Object getUserDetail(Long userId);
 
-	public void postVote(VoteDetails voteDetails);
+	public Object postVote(VoteDetails voteDetails, AppInfo appInfo);
 
-	public GroupDetails saveGroup(GroupDetails groupDetails);
+	public GroupDetails saveGroup(GroupDetails groupDetails, String operationFlag, AppInfo info);
 
 	public GroupDetails getGroupDetails(Long groupId);
 
@@ -28,5 +28,13 @@ public interface UserService {
 
 	public Object getGroupDetailsByCreateId(Long createId);
 
-	public Object getExistingAndNotExistingUsers(List<String> contactNoList,AppInfo info); 
+	public Object getExistingAndNotExistingUsers(List<String> contactNoList,AppInfo info);
+
+	public void updateGroupMembers(GroupDetails groupDetails, String operationFlag, AppInfo info);
+
+	public Object getGraphData(AppInfo info);
+
+	public Object getGroupDetailsByUserId(Long userId);
+
+	public void deleteGroup(Long groupId, AppInfo info); 
 }

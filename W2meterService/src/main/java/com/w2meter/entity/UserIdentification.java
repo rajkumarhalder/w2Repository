@@ -27,6 +27,10 @@ public class UserIdentification {
 	private String countryCode;
 	@Column(name="current_otp")
 	private String currentOtp;
+	@Column(name="current_token")
+	private String currentToken;
+	@Column(name="mobileno_with_countrycode")
+	private String mobileNoWithCountryCode;
 	@Column(name="old_otp")
 	private String oldOtp;
 	@Column(name="deviceMac")
@@ -106,6 +110,18 @@ public class UserIdentification {
 	}
 	public void setId(Long id) {
 		this.id = id;
+	}
+	public String getCurrentToken() {
+		return currentToken;
+	}
+	public void setCurrentToken(String currentToken) {
+		this.currentToken = currentToken;
+	}
+	public String getMobileNoWithCountryCode() {
+		return mobileNoWithCountryCode;
+	}
+	public void setMobileNoWithCountryCode(String mobileNoWithCountryCode) {
+		this.mobileNoWithCountryCode = mobileNoWithCountryCode;
 	}
 	
 }

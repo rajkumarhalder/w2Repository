@@ -13,9 +13,9 @@ public class DBConfig {
     public DataSource dataSource(){
        DriverManagerDataSource dataSource = new DriverManagerDataSource();
        dataSource.setDriverClassName("org.postgresql.Driver");
-       dataSource.setUrl("jdbc:postgresql://localhost:5432/w2meter_dev");
+       dataSource.setUrl("jdbc:postgresql://178.128.252.211:5432/w2meter_dev");
        dataSource.setUsername("postgres");
-       dataSource.setPassword("w2meter@123" );
+       //dataSource.setPassword("w2meter@123" );
        return dataSource;
     }
 }
