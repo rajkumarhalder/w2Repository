@@ -155,9 +155,9 @@ public class UserServiceImpl implements UserService{
 
 		List<Object> listOfGroup=new ArrayList<>();
 		
-		List<GroupDetails> listOfGroupDetails=(List<GroupDetails>) groupDetailsRepository.findAll();
+		//List<GroupDetails> listOfGroupDetails=(List<GroupDetails>) groupDetailsRepository.findAll();
 		
-		//List<GroupDetails> listOfGroupDetails=groupDetailsRepository.findByCreateId(createId);
+		List<GroupDetails> listOfGroupDetails=groupDetailsRepository.findByCreateId(userId);
 
 		for (GroupDetails groupDetails : listOfGroupDetails) {
 			
