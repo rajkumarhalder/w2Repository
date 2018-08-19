@@ -36,5 +36,9 @@ public interface UserService {
 
 	public Object getGroupDetailsByUserId(Long userId);
 
-	public void deleteGroup(Long groupId, AppInfo info); 
+	public void deleteGroup(Long groupId, AppInfo info);
+
+	public List<UserDetails> getWorldUsers(AppInfo info);
+
+	public List<UserDetails> getMyCountryUsers(AppInfo info); 
 }

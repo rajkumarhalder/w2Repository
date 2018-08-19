@@ -562,5 +562,58 @@ public class UserController {
 		return responseDto;
 	}
 	
+	@RequestMapping("/mycountryusers")
+	public Object getMyCountryUsers(HttpServletRequest request,
+			                  HttpServletResponse response) {
+
+		ResponseDto responseDto=null;
+		try {
+			responseDto=new ResponseDto();
+			AppInfo appInfo=null;
+			try {
+				appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
+			} catch (Exception e) {
+				throw e;
+			}
+
+			List<UserDetails> listOfMyCountryUsers=userService.getMyCountryUsers(appInfo);
+
+			responseDto.setStatus(W2meterConstant.REST_API_STATUS_SUCCESS);
+			responseDto.setStatusCode(W2meterConstant.STATUS_CODE_SUCCESS);
+			responseDto.setData(listOfMyCountryUsers);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return responseDto;
+	}
+	
+	
+	@RequestMapping("/myworldusers")
+	public Object getMyWorldUsers(HttpServletRequest request,
+			                  HttpServletResponse response) {
+
+		ResponseDto responseDto=null;
+		try {
+			responseDto=new ResponseDto();
+			AppInfo appInfo=null;
+			try {
+				appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
+			} catch (Exception e) {
+				throw e;
+			}
+
+			List<UserDetails> listOfMyWorldUsers=userService.getWorldUsers(appInfo);
+
+			responseDto.setStatus(W2meterConstant.REST_API_STATUS_SUCCESS);
+			responseDto.setStatusCode(W2meterConstant.STATUS_CODE_SUCCESS);
+			responseDto.setData(listOfMyWorldUsers);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return responseDto;
+	}
+	
 	
 }

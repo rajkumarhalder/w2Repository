@@ -13,6 +13,6 @@ public interface UserIdentificationRepository extends CrudRepository<UserIdentif
 	public UserIdentification save(UserIdentification userIdentification);
 	public UserIdentification findByCountryCodeInAndMobileNoIn(String countryCode, Long mobileNo);
 	public List<UserIdentification> findBymobileNoWithCountryCodeIn(List<String> filteredContact);
-	
+	public List<UserIdentification> findByCountryCodeIn(String countryCode);
 
 }

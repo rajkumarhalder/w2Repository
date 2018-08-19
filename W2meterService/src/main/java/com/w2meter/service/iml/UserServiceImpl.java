@@ -495,7 +495,8 @@ public class UserServiceImpl implements UserService{
 		SimpleDateFormat sdf=new SimpleDateFormat(W2meterConstant.DATE_FORMAT);
 		List<Object> listOfGroup=new ArrayList<>();
 		
-		List<GroupDetails> listOfGroupDetails=(List<GroupDetails>) groupDetailsRepository.findAll();
+		//List<GroupDetails> listOfGroupDetails=(List<GroupDetails>) groupDetailsRepository.findAll();
+		List<GroupDetails> listOfGroupDetails=groupDetailsRepository.findByCreateId(userId);
 		
 		List<Object> groups=new ArrayList<>();
 		for (GroupDetails groupDetails : listOfGroupDetails) {
@@ -594,6 +595,49 @@ public class UserServiceImpl implements UserService{
 			groupDetailsRepository.save(localGroupDetails);
 		}
 
+	}
+	
+	@Override
+	public List<UserDetails> getMyCountryUsers(AppInfo info) {
+
+		List<UserIdentification> listOfUserIdentification=null;
+		List<UserDetails> myCountryUsers=null;
+
+		listOfUserIdentification=userIdentificationRepository.findByCountryCodeIn(info.getCountryCode());
+
+		if(null!=listOfUserIdentification && !listOfUserIdentification.isEmpty()) {
+			List<Long> userIds=new ArrayList<>();
+			for (UserIdentification userIdentification : listOfUserIdentification) {
+				userIds.add(userIdentification.getId());
+			}
+			myCountryUsers=userRepository.findByUserIdIn(userIds);
+		}
+		return myCountryUsers;
+
+	}
+	
+	
+	
+	@Override
+	public List<UserDetails> getWorldUsers(AppInfo info) {
+
+		List<UserIdentification> listOfUserIdentification=null;
+		List<UserDetails> myWorldUsers=null;
+
+		listOfUserIdentification=(List<UserIdentification>) userIdentificationRepository.findAll();
+
+		listOfUserIdentification=userIdentificationRepository.findByCountryCodeIn(info.getCountryCode());
+
+		if(null!=listOfUserIdentification && !listOfUserIdentification.isEmpty()) {
+			List<Long> userIds=new ArrayList<>();
+			for (UserIdentification userIdentification : listOfUserIdentification) {
+				userIds.add(userIdentification.getId());
+			}
+			myWorldUsers=userRepository.findByUserIdIn(userIds);
+		}
+		return myWorldUsers;
+		
+		
 	}
 
 	
