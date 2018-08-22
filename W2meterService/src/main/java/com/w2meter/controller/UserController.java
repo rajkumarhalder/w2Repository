@@ -564,14 +564,17 @@ public class UserController {
 	
 	@RequestMapping("/mycountryusers")
 	public Object getMyCountryUsers(HttpServletRequest request,
-			                  HttpServletResponse response) {
+			                        HttpServletResponse response,
+			                        @RequestParam("countryCode") String countryCode) {
 
 		ResponseDto responseDto=null;
 		try {
 			responseDto=new ResponseDto();
 			AppInfo appInfo=null;
 			try {
-				appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
+				//appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
+				appInfo=new AppInfo();
+				appInfo.setCountryCode(countryCode);
 			} catch (Exception e) {
 				throw e;
 			}
@@ -598,7 +601,8 @@ public class UserController {
 			responseDto=new ResponseDto();
 			AppInfo appInfo=null;
 			try {
-				appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
+				//appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
+				appInfo=new AppInfo();
 			} catch (Exception e) {
 				throw e;
 			}

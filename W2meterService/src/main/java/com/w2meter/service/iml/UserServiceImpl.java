@@ -566,11 +566,12 @@ public class UserServiceImpl implements UserService{
 
 						myGroupDataForGraph.put("noOfDays", dates.size());
 						myGroupDataForGraph.put("noOfUsers", users.size());
-						myGroupDataForGraph.put("groupName", userDetailMap.get("groupname"));
-						myGroupDataForGraph.put("groupIcon", userDetailMap.get("groupicon"));
-						myGroupDataForGraph.put("groupId", userDetailMap.get("groupid"));
+						
 
 					}
+					myGroupDataForGraph.put("groupName", userDetailMap.get("groupname"));
+					myGroupDataForGraph.put("groupIcon", userDetailMap.get("groupicon"));
+					myGroupDataForGraph.put("groupId", userDetailMap.get("groupid"));
 					groups.add(myGroupDataForGraph);
 
 				}
@@ -626,7 +627,6 @@ public class UserServiceImpl implements UserService{
 
 		listOfUserIdentification=(List<UserIdentification>) userIdentificationRepository.findAll();
 
-		listOfUserIdentification=userIdentificationRepository.findByCountryCodeIn(info.getCountryCode());
 
 		if(null!=listOfUserIdentification && !listOfUserIdentification.isEmpty()) {
 			List<Long> userIds=new ArrayList<>();
