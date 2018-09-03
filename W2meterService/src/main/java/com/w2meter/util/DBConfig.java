@@ -1,5 +1,6 @@
 package com.w2meter.util;
 
+
 import javax.sql.DataSource;
 
 import org.springframework.context.annotation.Bean;
@@ -19,3 +20,4 @@ public class DBConfig {
        return dataSource;
     }
 }
+

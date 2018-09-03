@@ -15,6 +15,8 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -31,11 +33,14 @@ import com.w2meter.service.UserService;
 import com.w2meter.util.TokenUtil;
 import com.w2meter.util.W2meterConstant;
 
+
 @RestController
 @RequestMapping("/home")
 
 @SuppressWarnings({"unchecked"})
 public class UserController {
+	
+	private static final Logger LOGGER = LoggerFactory.getLogger(UserController.class);
 
 	@Autowired
 	private UserService userService;
@@ -49,23 +54,20 @@ public class UserController {
 			@RequestParam(value="about",required=false) String about,
 			@RequestParam(value="profilePic",required=false) MultipartFile profilePic) {
 
-		ResponseDto responseDto=null;
-		try {
-			responseDto=new ResponseDto();
-			AppInfo appInfo=null;
-			try {
-				appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
-			} catch (Exception e) {
-				throw e;
-			}
+		LOGGER.info("Inside saveOrUpdateUserProfile() for User ");
 
+		
+		SimpleDateFormat sdf=new SimpleDateFormat(W2meterConstant.DATE_FORMAT);
+		ResponseDto responseDto=new ResponseDto();
+		AppInfo appInfo=(AppInfo) request.getAttribute("appInfo");
+		try {
+			
 			Long userId=appInfo.getUserId();
 
-			SimpleDateFormat sdf=new SimpleDateFormat(W2meterConstant.DATE_FORMAT);
 			UserDetails userDetails=new UserDetails();
 			userDetails.setUserId(userId);
-			if(null!=name)
-				userDetails.setName(name);
+			userDetails.setName(name);
+			userDetails.setAbout(about);
 			if(null!=dateOfBirth)
 				userDetails.setDateOfBirth(sdf.parse(dateOfBirth));
 			if(null!=gender) {
@@ -74,9 +76,6 @@ public class UserController {
 				else if(gender.toUpperCase().startsWith(W2meterConstant.GENDER_FEMALE))
 					userDetails.setGender(W2meterConstant.GENDER_FEMALE);
 			}
-
-			if(null!=about)
-				userDetails.setAbout(about);
 
 			Path path=null;
 			try {
@@ -89,56 +88,56 @@ public class UserController {
 					Files.write(path, bytes);
 				}
 			} catch (Exception e) {
-				StringWriter sw = new StringWriter();
-				PrintWriter pw = new PrintWriter(sw);
-				e.printStackTrace(pw);
-				responseDto.setData(pw.toString());
+				LOGGER.error("Exception Occured During Profileoic upload..."+e);
 			}
 			if(null!=path)
 				userDetails.setPrifilePicUrl(path.toString());
 
-			userDetails.setMobileNo(appInfo.getCountryCode()+appInfo.getMobileNumber()+"");
+			userDetails.setContactNo(appInfo.getCountryCode()+appInfo.getMobileNumber()+"");
 			userDetails=(UserDetails) userService.updateUserDetail(userDetails);
-			
+
 			Map<String,Object> userDetailMap=new HashMap<>();
 			userDetailMap.put("name", userDetails.getName());
 			userDetailMap.put("about", userDetails.getAbout());
-			
+
 			if(null!=userDetails.getPrifilePicUrl()) {
 				userDetailMap.put("profilePic", W2meterConstant.SERVER_BASE_URL+userDetails.getPrifilePicUrl().replaceAll(W2meterConstant.TOMCAT_HOME, "/"));
 			}
 			else
 				userDetailMap.put("profilePic", null);
-			
+
 			userDetailMap.put("gender", userDetails.getGender());
 			if(null!=userDetails.getDateOfBirth())
 				userDetailMap.put("dateOfBirth", sdf.format(userDetails.getDateOfBirth()));
 			else
 				userDetailMap.put("dateOfBirth", null);
-			
+
 			userDetailMap.put("userId", userId);
 
 			responseDto.setData(userDetailMap);
-			responseDto.setStatusCode(W2meterConstant.STATUS_CODE_SUCCESS);
 			responseDto.setStatus(W2meterConstant.REST_API_STATUS_SUCCESS);
-			responseDto.setIdentificationToken(request.getHeader("identificationToken"));
+			responseDto.setStatusCode(W2meterConstant.STATUS_CODE_FAILURE);
+
+
 		} catch (Exception e) {
-			e.printStackTrace();
+			LOGGER.error("Exception Occured During Profileoic update for user -->"+appInfo.getMobileNumber()+"-->"+e);
+			responseDto.setStatus(W2meterConstant.REST_API_STATUS_FAILURE);
+			responseDto.setStatusCode(W2meterConstant.STATUS_CODE_SUCCESS);
 		}
 		return responseDto;
 	}
 
 
 	@RequestMapping("/registeruser")
-	public ResponseDto registerUser(HttpServletRequest request,
+	public Object registerUser(HttpServletRequest request,
 			HttpServletResponse response,
 			@RequestParam("countryCode") String countryCode,
 			@RequestParam("mobileNumber") String mobileNumber,
 			@RequestParam("otp") String currentOtp) {
 		
-		ResponseDto responseDto=null;
+		Map<String,Object> appInstallationResponseMap=new HashMap<>();
+		String identificationToken=null;
 		try {
-			responseDto=new ResponseDto();
 			if(null!=countryCode && !countryCode.isEmpty() 
 					&& null!=mobileNumber && !mobileNumber.isEmpty()
 					&& null!=currentOtp && !currentOtp.isEmpty()) {
@@ -151,26 +150,39 @@ public class UserController {
 
 				UserIdentification existingUserIdentification=(UserIdentification) userService.findExistingUserIdentification(userIdentification);
 
-				if(null==existingUserIdentification)
+				if(null==existingUserIdentification) {
 					userIdentification=(UserIdentification) userService.registerUser(userIdentification);
-				else
-					userIdentification=existingUserIdentification;
 
-				String identificationToken=TokenUtil.createToken(String.valueOf(userIdentification.getId()), String.valueOf(userIdentification.getMobileNo()),userIdentification.getCountryCode());
+					UserDetails userDetails=new UserDetails();
+					userDetails.setUserId(userIdentification.getId());
+					userService.updateUserDetail(userDetails);
+
+					identificationToken=TokenUtil.createToken(String.valueOf(userIdentification.getId()), String.valueOf(userIdentification.getMobileNo()),userIdentification.getCountryCode());
+				}
+				else {
+					userIdentification=existingUserIdentification;
+					identificationToken=userIdentification.getCurrentToken();
+				}
 
 				userIdentification.setCurrentToken(identificationToken);
 				userService.registerUser(userIdentification);
-				
-				responseDto.setIdentificationToken(identificationToken);
-				responseDto.setStatus(W2meterConstant.REST_API_STATUS_SUCCESS);
-				responseDto.setStatusCode(W2meterConstant.STATUS_CODE_SUCCESS);
+
+				appInstallationResponseMap.put("statusCode", W2meterConstant.STATUS_CODE_SUCCESS);
+				appInstallationResponseMap.put("status", W2meterConstant.REST_API_STATUS_SUCCESS);
+				appInstallationResponseMap.put("identificationToken", identificationToken);
+			}
+			else {
+				LOGGER.info("App Could Not register because of some null value");
+				appInstallationResponseMap.put("statusCode", W2meterConstant.STATUS_CODE_FAILURE);
+				appInstallationResponseMap.put("status", W2meterConstant.REST_API_STATUS_FAILURE);
 			}
 
-
 		} catch (Exception e) {
-			e.printStackTrace();
+			LOGGER.error("Exception Occured During registerUser... "+e);
+			appInstallationResponseMap.put("statusCode", W2meterConstant.STATUS_CODE_FAILURE);
+			appInstallationResponseMap.put("status", W2meterConstant.REST_API_STATUS_FAILURE);
 		}
-		return responseDto;
+		return appInstallationResponseMap;
 	}
 
 
@@ -178,41 +190,34 @@ public class UserController {
 	public Object getUserDetails(HttpServletRequest request,
 			HttpServletResponse response) {
 
-		ResponseDto responseDto=null;
+		ResponseDto responseDto=new ResponseDto();
+		AppInfo appInfo=(AppInfo) request.getAttribute("appInfo");
 		try {
-			responseDto=new ResponseDto();
-			AppInfo appInfo=null;
-			try {
-				appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
-			} catch (Exception e) {
-				throw e;
-			}
-
 			Long userId=appInfo.getUserId();
 
 			UserDetails userDetails=(UserDetails) userService.getUserDetail(userId);
-			
+
 			if(null==userDetails)
 				userDetails=new UserDetails();
-			
+
 			SimpleDateFormat sdf=new SimpleDateFormat(W2meterConstant.DATE_FORMAT);
 			Map<String,Object> userDetailMap=new HashMap<>();
 			userDetailMap.put("name", userDetails.getName());
 			userDetailMap.put("about", userDetails.getAbout());
-			
+
 			if(null!=userDetails.getPrifilePicUrl()) {
-				
+
 				userDetailMap.put("profilePic", W2meterConstant.SERVER_BASE_URL+userDetails.getPrifilePicUrl().replaceAll(W2meterConstant.TOMCAT_HOME, "/"));
 			}
 			else
 				userDetailMap.put("profilePic", null);
-			
+
 			userDetailMap.put("gender", userDetails.getGender());
 			if(null!=userDetails.getDateOfBirth())
 				userDetailMap.put("dateOfBirth", sdf.format(userDetails.getDateOfBirth()));
 			else
 				userDetailMap.put("dateOfBirth", null);
-			
+
 			userDetailMap.put("userId", userId);
 
 			responseDto.setStatus(W2meterConstant.REST_API_STATUS_SUCCESS);
@@ -231,16 +236,9 @@ public class UserController {
 			HttpServletResponse response,
 			@RequestParam(value="todayrating") String todayrating ) {
 
-		ResponseDto responseDto=null;
+		AppInfo appInfo=(AppInfo) request.getAttribute("appInfo");
+		ResponseDto responseDto=new ResponseDto();
 		try {
-			responseDto=new ResponseDto();
-			AppInfo appInfo=null;
-			try {
-				appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
-			} catch (Exception e) {
-				throw e;
-			}
-
 			Long userId=appInfo.getUserId();
 
 			VoteDetails voteDetails=new VoteDetails();
@@ -254,7 +252,6 @@ public class UserController {
 
 			responseDto.setStatusCode(W2meterConstant.STATUS_CODE_SUCCESS);
 			responseDto.setStatus(W2meterConstant.REST_API_STATUS_SUCCESS);
-			responseDto.setIdentificationToken(request.getHeader("identificationToken"));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -269,16 +266,9 @@ public class UserController {
 			@RequestParam(value="groupicon",required=false) MultipartFile groupIcon,
 			@RequestParam(value="groupid",required=false) String groupId) {
 
-		ResponseDto responseDto=null;
+		AppInfo appInfo=(AppInfo) request.getAttribute("appInfo");
+		ResponseDto responseDto=new ResponseDto();
 		try {
-			responseDto=new ResponseDto();
-			AppInfo appInfo=null;
-			try {
-				appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
-			} catch (Exception e) {
-				throw e;
-			}
-
 			Long userId=appInfo.getUserId();
 			Path path=null;
 			if(null!=groupIcon) {
@@ -339,7 +329,6 @@ public class UserController {
 			
 			responseDto.setStatusCode(W2meterConstant.STATUS_CODE_SUCCESS);
 			responseDto.setStatus(W2meterConstant.REST_API_STATUS_SUCCESS);
-			responseDto.setIdentificationToken(request.getHeader("identificationToken"));
 			responseDto.setData(groupDetailMap);
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -355,15 +344,9 @@ public class UserController {
 			@RequestParam(value="memberId") String memberId,
 			@RequestParam(value="operationFlag") String operationFlag) {
 
-		ResponseDto responseDto=null;
+		AppInfo appInfo=(AppInfo) request.getAttribute("appInfo");
+		ResponseDto responseDto=new ResponseDto();
 		try {
-			responseDto=new ResponseDto();
-			AppInfo appInfo=null;
-			try {
-				appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
-			} catch (Exception e) {
-				throw e;
-			}
 			
 			Long userId=appInfo.getUserId();
 			GroupDetails groupDetails=null;
@@ -375,7 +358,6 @@ public class UserController {
 			}
 			responseDto.setStatusCode(W2meterConstant.STATUS_CODE_SUCCESS);
 			responseDto.setStatus(W2meterConstant.REST_API_STATUS_SUCCESS);
-			responseDto.setIdentificationToken(request.getHeader("identificationToken"));
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -388,16 +370,9 @@ public class UserController {
 			HttpServletResponse response,
 			@RequestParam(value="groupid") String groupId) {
 
-		ResponseDto responseDto=null;
+		AppInfo appInfo=(AppInfo) request.getAttribute("appInfo");
+		ResponseDto responseDto=new ResponseDto();
 		try {
-			responseDto=new ResponseDto();
-			AppInfo appInfo=null;
-			try {
-				appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
-			} catch (Exception e) {
-				throw e;
-			}
-
 			Long userId=appInfo.getUserId();
 
 			Map<String,Object> groupInfoMap=(Map<String, Object>) userService.getGroupDetailswithMemebers(Long.parseLong(groupId));
@@ -417,15 +392,9 @@ public class UserController {
 	public Object getAllGroups(HttpServletRequest request,
 			HttpServletResponse response) {
 
-		ResponseDto responseDto=null;
+		AppInfo appInfo=(AppInfo) request.getAttribute("appInfo");
+		ResponseDto responseDto=new ResponseDto();
 		try {
-			responseDto=new ResponseDto();
-			AppInfo appInfo=null;
-			try {
-				appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
-			} catch (Exception e) {
-				throw e;
-			}
 			Long userId=appInfo.getUserId();
 
 			List<Object> groupList= (List<Object>) userService.getGroupDetailsByCreateId(userId);
@@ -444,16 +413,9 @@ public class UserController {
 			HttpServletResponse response,
 			@RequestParam(value="groupid") String groupId) {
 
-		ResponseDto responseDto=null;
+		AppInfo appInfo=(AppInfo) request.getAttribute("appInfo");
+		ResponseDto responseDto=new ResponseDto();
 		try {
-			responseDto=new ResponseDto();
-			AppInfo appInfo=null;
-			try {
-				appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
-			} catch (Exception e) {
-				throw e;
-			}
-
 			Long userId=appInfo.getUserId();
 
 			Map<String,Object> groupInfoMap=(Map<String, Object>) userService.getGroupDetailswithMemebers(Long.parseLong(groupId));
@@ -474,17 +436,9 @@ public class UserController {
 			                                     HttpServletResponse response,
 			                                     @RequestParam(value="mycontacts") String myContacts) {
 
-		ResponseDto responseDto=null;
+		AppInfo appInfo=(AppInfo) request.getAttribute("appInfo");
+		ResponseDto responseDto=new ResponseDto();
 		try {
-			responseDto=new ResponseDto();
-			AppInfo appInfo=null;
-			try {
-				appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
-			} catch (Exception e) {
-				throw e;
-			}
-
-
 			Long userId=appInfo.getUserId();
 
 			List<String> contactList=new  ArrayList<>();
@@ -513,16 +467,9 @@ public class UserController {
 	public Object getDataForGraph(HttpServletRequest request,
 			                      HttpServletResponse response) {
 
-		ResponseDto responseDto=null;
+		AppInfo appInfo=(AppInfo) request.getAttribute("appInfo");
+		ResponseDto responseDto=new ResponseDto();
 		try {
-			responseDto=new ResponseDto();
-			AppInfo appInfo=null;
-			try {
-				appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
-			} catch (Exception e) {
-				throw e;
-			}
-
 			Object obj=userService.getGraphData(appInfo);
 
 			responseDto.setStatus(W2meterConstant.REST_API_STATUS_SUCCESS);
@@ -541,15 +488,9 @@ public class UserController {
 			                  HttpServletResponse response,
 			                  @RequestParam(value="groupId") String groupId) {
 
-		ResponseDto responseDto=null;
+		AppInfo appInfo=(AppInfo) request.getAttribute("appInfo");
+		ResponseDto responseDto=new ResponseDto();
 		try {
-			responseDto=new ResponseDto();
-			AppInfo appInfo=null;
-			try {
-				appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
-			} catch (Exception e) {
-				throw e;
-			}
 
 			userService.deleteGroup(Long.valueOf(groupId), appInfo);
 
@@ -567,18 +508,10 @@ public class UserController {
 			                        HttpServletResponse response,
 			                        @RequestParam("countryCode") String countryCode) {
 
-		ResponseDto responseDto=null;
+		AppInfo appInfo=(AppInfo) request.getAttribute("appInfo");
+		ResponseDto responseDto=new ResponseDto();
 		try {
-			responseDto=new ResponseDto();
-			AppInfo appInfo=null;
-			try {
-				//appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
-				appInfo=new AppInfo();
-				appInfo.setCountryCode(countryCode);
-			} catch (Exception e) {
-				throw e;
-			}
-
+			appInfo.setCountryCode(countryCode);
 			List<UserDetails> listOfMyCountryUsers=userService.getMyCountryUsers(appInfo);
 
 			responseDto.setStatus(W2meterConstant.REST_API_STATUS_SUCCESS);
@@ -596,17 +529,10 @@ public class UserController {
 	public Object getMyWorldUsers(HttpServletRequest request,
 			                  HttpServletResponse response) {
 
-		ResponseDto responseDto=null;
+		AppInfo appInfo=(AppInfo) request.getAttribute("appInfo");
+		ResponseDto responseDto=new ResponseDto();
 		try {
-			responseDto=new ResponseDto();
-			AppInfo appInfo=null;
-			try {
-				//appInfo=TokenUtil.getTokendetail(request.getHeader("identificationToken"));
-				appInfo=new AppInfo();
-			} catch (Exception e) {
-				throw e;
-			}
-
+		
 			List<UserDetails> listOfMyWorldUsers=userService.getWorldUsers(appInfo);
 
 			responseDto.setStatus(W2meterConstant.REST_API_STATUS_SUCCESS);

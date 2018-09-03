@@ -1,7 +1,9 @@
 package com.w2meter.util;
 
-import java.util.Date;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import com.w2meter.controller.UserController;
 import com.w2meter.dto.AppInfo;
 
 import io.jsonwebtoken.Claims;
@@ -9,26 +11,28 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 
 public class TokenUtil {
-
+	
+	private static final Logger LOGGER = LoggerFactory.getLogger(TokenUtil.class);
+	
 	public static String createToken(String userId,String mobileNumber,String countryCode) {
 		String jwt=null;
-		Long currentMilis=new Date().getTime();
-		Long tokenExpireTime=currentMilis+(1000*3600*24*365);
-
-		jwt = Jwts.builder()
-				.setSubject("w2meter")
-				.setExpiration(new Date(tokenExpireTime))
-				.claim("userId", userId)
-				.claim("mobileNumber", mobileNumber)
-				.claim("countryCode", countryCode)
-				.signWith(SignatureAlgorithm.HS256,"w2meter").compact();
+		try {
+			jwt = Jwts.builder()
+					.setSubject("w2meter")
+					.claim("userId", userId)
+					.claim("mobileNumber", mobileNumber)
+					.claim("countryCode", countryCode)
+					.signWith(SignatureAlgorithm.HS256,"w2meter").compact();
+		} catch (Exception e) {
+			LOGGER.error("Exception Occured during jwt token creation "+e);
+			throw e;
+		}
+		
 		return jwt;
 
 	}
 
-
 	public static AppInfo getTokendetail(String jwtToken) {
-
 		AppInfo appInfo=null;
 		try {
 
@@ -42,7 +46,8 @@ public class TokenUtil {
 			appInfo.setCountryCode((String) claims.get("countryCode"));
 
 		} catch (Exception e) {
-			e.printStackTrace();
+			LOGGER.error("Exception Occured during jwt token decryption "+e);
+			throw e;
 		}
 		return appInfo;
 

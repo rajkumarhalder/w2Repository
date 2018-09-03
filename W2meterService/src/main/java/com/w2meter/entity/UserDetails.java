@@ -18,8 +18,12 @@ public class UserDetails {
 	private String name ;
 	@Column(name="email")
 	private String email ;
-	@Column(name="mobileno")
-	private String mobileNo ;
+	@Column(name="mobile_no")
+	private Long mobileNo ;
+	@Column(name="country_code")
+	private String countryCode;
+	@Column(name="contact_no")
+	private String contactNo;
 	@Column(name="about")
 	private String about;
 	@Column(name="gender")
@@ -56,12 +60,23 @@ public class UserDetails {
 	public void setEmail(String email) {
 		this.email = email;
 	}
-	
-	public String getMobileNo() {
+	public Long getMobileNo() {
 		return mobileNo;
 	}
-	public void setMobileNo(String mobileNo) {
+	public void setMobileNo(Long mobileNo) {
 		this.mobileNo = mobileNo;
+	}
+	public String getCountryCode() {
+		return countryCode;
+	}
+	public void setCountryCode(String countryCode) {
+		this.countryCode = countryCode;
+	}
+	public String getContactNo() {
+		return contactNo;
+	}
+	public void setContactNo(String contactNo) {
+		this.contactNo = contactNo;
 	}
 	public String getAbout() {
 		return about;
@@ -80,6 +95,12 @@ public class UserDetails {
 	}
 	public void setDateOfBirth(Date dateOfBirth) {
 		this.dateOfBirth = dateOfBirth;
+	}
+	public String getPrifilePicUrl() {
+		return prifilePicUrl;
+	}
+	public void setPrifilePicUrl(String prifilePicUrl) {
+		this.prifilePicUrl = prifilePicUrl;
 	}
 	public Date getCreateDate() {
 		return createDate;
@@ -111,13 +132,6 @@ public class UserDetails {
 	public void setIsActive(int isActive) {
 		this.isActive = isActive;
 	}
-	public String getPrifilePicUrl() {
-		return prifilePicUrl;
-	}
-	public void setPrifilePicUrl(String prifilePicUrl) {
-		this.prifilePicUrl = prifilePicUrl;
-	}
-	
 	
 	
 

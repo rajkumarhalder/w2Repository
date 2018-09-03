@@ -4,7 +4,6 @@ public class ResponseDto {
 	
 	private int statusCode;
 	private String status;
-	private String identificationToken;
 	private Object data;
 	public int getStatusCode() {
 		return statusCode;
@@ -17,12 +16,6 @@ public class ResponseDto {
 	}
 	public void setStatus(String status) {
 		this.status = status;
-	}
-	public String getIdentificationToken() {
-		return identificationToken;
-	}
-	public void setIdentificationToken(String identificationToken) {
-		this.identificationToken = identificationToken;
 	}
 	public Object getData() {
 		return data;

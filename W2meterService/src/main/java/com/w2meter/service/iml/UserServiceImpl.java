@@ -240,14 +240,13 @@ public class UserServiceImpl implements UserService{
 	public Object getExistingAndNotExistingUsers(List<String> contactNoList,AppInfo info) {
 
 		Map<String,Object> userList=new HashMap<>();
-
 		List<String> filteredContact=new ArrayList<>();
-		List<String> existingContact=new ArrayList<>();
-
+		Set<String> existingContact=new HashSet<>();
 		List<Object> existingUsersList=new ArrayList<>();
+		
 
 		for (String string : contactNoList) {
-
+			
 			if(string.startsWith("+"))
 				filteredContact.add(string);
 			else if(string.startsWith("0")) {
@@ -256,55 +255,55 @@ public class UserServiceImpl implements UserService{
 			}
 			else
 				filteredContact.add(info.getCountryCode()+string);
-
+		}
+		List<Long> mobileNo=new ArrayList<>();
+		for (String contact : contactNoList) {
+			try {
+				mobileNo.add(Long.valueOf(contact));
+			}
+			catch (Exception e) {
+				// TODO: handle exception
+			}
+			
 		}
 		
-		List<UserIdentification> listOfUserIdentification=userIdentificationRepository.findBymobileNoWithCountryCodeIn(filteredContact);
-		
-		List<UserDetails> listOfUserDetails=userRepository.findByMobileNoIn(filteredContact);
+		List<UserDetails> listOfUserDetails1=userRepository.findByContactNoIn(filteredContact);
+		List<UserDetails> listOfUserDetails2=userRepository.findByMobileNoIn(mobileNo);
 
-		Map<Long,Object> phoneNoVsUserId=new HashMap<>();
-		for (UserIdentification userIdentification : listOfUserIdentification) {
-			phoneNoVsUserId.put(userIdentification.getId(), userIdentification.getMobileNoWithCountryCode());
-		}
+		List<UserDetails> listOfUserDetails=new ArrayList<>();
 		
+		if(null!=listOfUserDetails1 && !listOfUserDetails1.isEmpty())
+			listOfUserDetails.addAll(listOfUserDetails1);
+		if(null!=listOfUserDetails2 && !listOfUserDetails2.isEmpty())
+			listOfUserDetails.addAll(listOfUserDetails2);
 		
+		List<Long> addedUsers=new ArrayList<>();
 		for (UserDetails userDetails : listOfUserDetails) {
 			
-			phoneNoVsUserId.remove(userDetails.getUserId());
-			Map<String,Object> contact=new HashMap<>();
-
-			contact.put("userid", userDetails.getUserId());
-			contact.put("name", userDetails.getName());
-			contact.put("contactno", userDetails.getMobileNo());
-			if(null!=userDetails.getPrifilePicUrl()) {
-				contact.put("prifilePicUrl", W2meterConstant.SERVER_BASE_URL+userDetails.getPrifilePicUrl().replaceAll(W2meterConstant.TOMCAT_HOME, "/"));
-			}
-			else
-				contact.put("prifilePicUrl", null);
-
-			existingUsersList.add(contact);
-			existingContact.add(userDetails.getMobileNo());
-		}
-		
-		if(!phoneNoVsUserId.isEmpty()) {
-			for (Entry<Long, Object> entry : phoneNoVsUserId.entrySet()) {
+			if(!addedUsers.contains(userDetails.getUserId())) {
+				addedUsers.add(userDetails.getUserId());
 				Map<String,Object> contact=new HashMap<>();
-				contact.put("userid", entry.getKey());
-				contact.put("name", entry.getValue());
-				contact.put("contactno", entry.getValue());
-				contact.put("prifilePicUrl", null);
-				
+
+				contact.put("userid", userDetails.getUserId());
+				contact.put("name", userDetails.getName());
+				contact.put("contactno", userDetails.getContactNo());
+				if(null!=userDetails.getPrifilePicUrl()) {
+					contact.put("prifilePicUrl", W2meterConstant.SERVER_BASE_URL+userDetails.getPrifilePicUrl().replaceAll(W2meterConstant.TOMCAT_HOME, "/"));
+				}
+				else
+					contact.put("prifilePicUrl", null);
+
 				existingUsersList.add(contact);
-				existingContact.add(entry.getValue()+"");
+				existingContact.add(userDetails.getMobileNo()+"");
+				existingContact.add(userDetails.getContactNo());
 			}
+				
 		}
 		
 		contactNoList.removeAll(existingContact);
 
 		userList.put("registeredUsersList", existingUsersList);
 		userList.put("notRegisteredUsersList", contactNoList);
-
 
 		return userList;
 	}
