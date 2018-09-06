@@ -36,4 +36,8 @@ public class W2meterUtil {
 		return percentage;
 	}
 
+	
+	
+	
+	
 }

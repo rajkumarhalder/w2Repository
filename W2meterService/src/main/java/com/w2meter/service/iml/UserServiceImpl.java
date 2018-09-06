@@ -8,15 +8,19 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.w2meter.controller.UserController;
 import com.w2meter.dto.AppInfo;
 import com.w2meter.entity.GroupDetails;
 import com.w2meter.entity.UserDetails;
@@ -33,6 +37,8 @@ import com.w2meter.util.W2meterUtil;
 
 @Service
 public class UserServiceImpl implements UserService{
+	
+	private static final Logger LOGGER = LoggerFactory.getLogger(UserServiceImpl.class);
 
 	@Autowired
 	private UserRepository userRepository ;
@@ -238,69 +244,45 @@ public class UserServiceImpl implements UserService{
 
 	@Override
 	public Object getExistingAndNotExistingUsers(List<String> contactNoList,AppInfo info) {
-
-		Map<String,Object> userList=new HashMap<>();
-		List<String> filteredContact=new ArrayList<>();
-		Set<String> existingContact=new HashSet<>();
-		List<Object> existingUsersList=new ArrayList<>();
 		
+		List<Object> existingUsersList=null;
+		Map<String,Object> userList=null;
+		try {
+			existingUsersList=new ArrayList<>();
+			userList=new HashMap<>();
+			List<UserDetails> listOfUsers=(List<UserDetails>) userRepository.findAll();
 
-		for (String string : contactNoList) {
-			
-			if(string.startsWith("+"))
-				filteredContact.add(string);
-			else if(string.startsWith("0")) {
-				string.replaceFirst("0", "+91");
-				filteredContact.add(string);
-			}
-			else
-				filteredContact.add(info.getCountryCode()+string);
-		}
-		List<Long> mobileNo=new ArrayList<>();
-		for (String contact : contactNoList) {
-			try {
-				mobileNo.add(Long.valueOf(contact));
-			}
-			catch (Exception e) {
-				// TODO: handle exception
-			}
-			
-		}
-		
-		List<UserDetails> listOfUserDetails1=userRepository.findByContactNoIn(filteredContact);
-		List<UserDetails> listOfUserDetails2=userRepository.findByMobileNoIn(mobileNo);
+			Iterator itrContact=contactNoList.iterator();
+			boolean flag=false;
+			while (itrContact.hasNext()) {
+				String contact=(String) itrContact.next();
+				for (UserDetails userDetails : listOfUsers) {
+					if(contact.contains(userDetails.getMobileNo()+""))
+					{
+						flag=true;
+						Map<String,Object> contactList=new HashMap<>();
 
-		List<UserDetails> listOfUserDetails=new ArrayList<>();
-		
-		if(null!=listOfUserDetails1 && !listOfUserDetails1.isEmpty())
-			listOfUserDetails.addAll(listOfUserDetails1);
-		if(null!=listOfUserDetails2 && !listOfUserDetails2.isEmpty())
-			listOfUserDetails.addAll(listOfUserDetails2);
-		
-		List<Long> addedUsers=new ArrayList<>();
-		for (UserDetails userDetails : listOfUserDetails) {
-			
-			if(!addedUsers.contains(userDetails.getUserId())) {
-				addedUsers.add(userDetails.getUserId());
-				Map<String,Object> contact=new HashMap<>();
+						contactList.put("userid", userDetails.getUserId());
+						contactList.put("name", userDetails.getName());
+						contactList.put("contactno", userDetails.getContactNo());
+						if(null!=userDetails.getPrifilePicUrl()) {
+							contactList.put("prifilePicUrl", W2meterConstant.SERVER_BASE_URL+userDetails.getPrifilePicUrl().replaceAll(W2meterConstant.TOMCAT_HOME, "/"));
+						}
+						else
+							contactList.put("prifilePicUrl", null);
 
-				contact.put("userid", userDetails.getUserId());
-				contact.put("name", userDetails.getName());
-				contact.put("contactno", userDetails.getContactNo());
-				if(null!=userDetails.getPrifilePicUrl()) {
-					contact.put("prifilePicUrl", W2meterConstant.SERVER_BASE_URL+userDetails.getPrifilePicUrl().replaceAll(W2meterConstant.TOMCAT_HOME, "/"));
+						existingUsersList.add(contactList);
+
+						
+					}
 				}
-				else
-					contact.put("prifilePicUrl", null);
-
-				existingUsersList.add(contact);
-				existingContact.add(userDetails.getMobileNo()+"");
-				existingContact.add(userDetails.getContactNo());
+				if(flag)
+				itrContact.remove();
 			}
-				
+		} catch (Exception e) {
+			e.printStackTrace();
+			LOGGER.error("Error occured inside getExistingAndNotExistingUsers()");
 		}
-		
-		contactNoList.removeAll(existingContact);
 
 		userList.put("registeredUsersList", existingUsersList);
 		userList.put("notRegisteredUsersList", contactNoList);
